@@ -32,7 +32,7 @@ export const sendOTPApi = async (phone) => {
 
   try {
     const response = await axios.post(
-      `${WEBSITE_URL}/api/mobile/send-static-otp`,
+      `${WEBSITE_URL}/api/rider/auth/send-otp`,
       {
         phoneNumber: phone,
       },
