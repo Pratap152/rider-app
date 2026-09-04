@@ -1,4 +1,4 @@
-const WEBSITE_URL="https://rider-api.swachvega.com";
+const WEBSITE_URL="https://api.swachvega.com";
 
 export default WEBSITE_URL;
 
@@ -6,4 +6,4 @@ export default WEBSITE_URL;
 // export default WEBSOCKET_URL;
 // https://rider-api.swachvega.com/ for dev
 
-export const WEBSOCKET_URL = "wss://rider-api.swachvega.com";
+export const WEBSOCKET_URL = "wss://api.swachvega.com";
