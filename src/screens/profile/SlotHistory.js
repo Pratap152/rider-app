@@ -85,6 +85,8 @@ const getLocalDate = () => {
 
   return `${year}-${month}-${day}`;
 };
+
+
 const SlotHistory = ({ navigation }) => {
   const [slots, setSlots] = useState([]);
   const [summary, setSummary] = useState({
@@ -149,37 +151,29 @@ const SlotHistory = ({ navigation }) => {
           String(now.getDate()).padStart(2, '0'),
         ].join('-');
 
-        const params = {
+              const params = {
           page: pageNo,
           limit: PAGE_SIZE,
         };
 
-        // DAILY
         if (filterType === 'daily') {
           params.filter = 'daily';
           params.date = date;
-        }
+        } 
 
-        // WEEKLY
-        else if (filterType === 'weekly') {
+       else if (filterType === 'weekly') {
           params.filter = 'weekly';
-          params.date = date;
         }
 
-        // MONTHLY
         else if (filterType === 'monthly') {
           params.filter = 'monthly';
           params.month = month;
           params.year = year;
+        } 
+
+        else if (filterType === 'all') {
+          params.filter = 'all';
         }
-
-        // ALL
-        // No filter parameter is sent.
-
-        console.log(
-          '[SlotHistory] Request:',
-          params
-        );
 
         const res = await getSlotHistory(params);
 
@@ -196,6 +190,7 @@ const SlotHistory = ({ navigation }) => {
         }
 
         const responseData = res.data;
+      
 
         /*
          * RIDER TYPE
@@ -324,39 +319,45 @@ const SlotHistory = ({ navigation }) => {
     }, {});
   }, [slots]);
 
-  const sortedDates = useMemo(() => {
-    const today = getLocalDate();
+ const sortedDates = useMemo(() => {
+  const dates = Object.keys(groupedSlots);
 
-    return Object.keys(groupedSlots).sort((a, b) => {
-      // Always keep today at the top
-      if (a === today) return -1;
-      if (b === today) return 1;
+  if (activeFilter === 'weekly') {
+    return dates.sort(
+      (a, b) =>
+        new Date(`${a}T00:00:00`) -
+        new Date(`${b}T00:00:00`)
+    );
+  }
 
-      const dateA = new Date(`${a}T00:00:00`);
-      const dateB = new Date(`${b}T00:00:00`);
-      const todayDate = new Date(`${today}T00:00:00`);
+  const today = getLocalDate();
 
-      const aIsFuture = dateA > todayDate;
-      const bIsFuture = dateB > todayDate;
+  return dates.sort((a, b) => {
+    if (a === today) return -1;
+    if (b === today) return 1;
 
-      // Future dates: today -> tomorrow -> next day...
-      if (aIsFuture && bIsFuture) {
-        return dateA - dateB;
-      }
+    const dateA = new Date(`${a}T00:00:00`);
+    const dateB = new Date(`${b}T00:00:00`);
+    const todayDate = new Date(`${today}T00:00:00`);
 
-      // Future dates should come before past dates
-      if (aIsFuture && !bIsFuture) {
-        return -1;
-      }
+    const aIsFuture = dateA > todayDate;
+    const bIsFuture = dateB > todayDate;
 
-      if (!aIsFuture && bIsFuture) {
-        return 1;
-      }
+    if (aIsFuture && bIsFuture) {
+      return dateA - dateB;
+    }
 
-      // Past dates: latest past date first
-      return dateB - dateA;
-    });
-  }, [groupedSlots]);
+    if (aIsFuture && !bIsFuture) {
+      return -1;
+    }
+
+    if (!aIsFuture && bIsFuture) {
+      return 1;
+    }
+
+    return dateB - dateA;
+  });
+}, [groupedSlots, activeFilter]);
 
   const flatData = useMemo(() => {
     if (!sortedDates.length) return [];
@@ -399,13 +400,11 @@ const SlotHistory = ({ navigation }) => {
     );
   };
 
-  const getLeftLabel = date => {
-    if (isToday(date)) return 'Today';
-    if (isYesterday(date)) return 'Yesterday';
-    return new Date(date).toLocaleDateString('en-US', {
-      weekday: 'long',
-    });
-  };
+ const getLeftLabel = date => {
+  return new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
+    weekday: 'long',
+  });
+};
 
   /*  RENDER  */
   const renderItem = useCallback(({ item }) => {
