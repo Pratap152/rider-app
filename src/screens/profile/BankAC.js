@@ -370,92 +370,106 @@ const BankAC = ({ navigation }) => {
      ========================================================= */
 
   const handleInputChange = (key, text) => {
-    /* ---------------------------------------------
-       ACCOUNT NUMBER
-       --------------------------------------------- */
-    if (key === 'accountNumber') {
-      /*
-       * Keep digits only.
-       * Remove spaces, letters and special characters.
-       * Maximum 15 digits.
-       */
-      const newValue = String(text)
-        .replace(/\D/g, '')
-        .slice(0, 15);
-
-      setBankDetails(prev => ({
-        ...prev,
-        accountNumber: newValue,
-      }));
-
+  /* ---------------------------------------------
+     ACCOUNT NUMBER
+     --------------------------------------------- */
+  if (key === 'accountNumber') {
+    // Allow digits only.
+    // Invalid characters are rejected instead of
+    // being removed from the controlled value.
+    if (!/^\d*$/.test(text)) {
       return;
     }
 
-    /* ---------------------------------------------
-       IFSC CODE
-       --------------------------------------------- */
-    if (key === 'ifscCode') {
-      /*
-       * Convert to uppercase.
-       * Keep only A-Z and 0-9.
-       * Maximum 11 characters.
-       */
-      const newValue = String(text)
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, '')
-        .slice(0, 11);
-
-      setBankDetails(prev => ({
-        ...prev,
-        ifscCode: newValue,
-      }));
-
+    if (text.length > 15) {
       return;
     }
 
-    /* ---------------------------------------------
-       NAME / BANK / BRANCH
-       --------------------------------------------- */
-    if (
-      ['accountHolderName', 'bankName', 'branch'].includes(key)
-    ) {
-      /*
-       * Only alphabets and spaces.
-       */
-      let newValue = String(text).replace(/[^A-Za-z ]/g, '');
+    setBankDetails(prev => ({
+      ...prev,
+      accountNumber: text,
+    }));
 
-      /*
-       * Never allow a leading space.
-       */
-      newValue = newValue.replace(/^ +/, '');
+    return;
+  }
 
-      /*
-       * Never allow consecutive spaces.
-       */
-      newValue = newValue.replace(/ {2,}/g, ' ');
+  /* ---------------------------------------------
+     IFSC CODE
+     --------------------------------------------- */
+  if (key === 'ifscCode') {
+    // Allow only A-Z and 0-9.
+    // Invalid characters are rejected.
+    const upperText = text.toUpperCase();
 
-      /*
-       * Maximum 30 characters.
-       */
-      newValue = newValue.slice(0, 30);
-
-      setBankDetails(prev => ({
-        ...prev,
-        [key]: newValue,
-      }));
-
+    if (!/^[A-Z0-9]*$/.test(upperText)) {
       return;
     }
 
-    /* ---------------------------------------------
-       OTHER FIELDS
-       --------------------------------------------- */
+    if (upperText.length > 11) {
+      return;
+    }
+
+    setBankDetails(prev => ({
+      ...prev,
+      ifscCode: upperText,
+    }));
+
+    return;
+  }
+
+  /* ---------------------------------------------
+     ACCOUNT HOLDER / BANK NAME / BRANCH
+     --------------------------------------------- */
+  if (
+    ['accountHolderName', 'bankName', 'branch'].includes(key)
+  ) {
+    /*
+     * IMPORTANT:
+     * Do NOT use .replace() here.
+     *
+     * If the user types an invalid character such as
+     * a number, simply reject that input change.
+     *
+     * This prevents the controlled TextInput from
+     * changing its value underneath the native cursor.
+     */
+
+    // Alphabets and spaces only.
+    if (!/^[A-Za-z ]*$/.test(text)) {
+      return;
+    }
+
+    // Do not allow a leading space.
+    if (text.startsWith(' ')) {
+      return;
+    }
+
+    // Do not allow two consecutive spaces.
+    if (text.includes('  ')) {
+      return;
+    }
+
+    // Maximum 30 characters.
+    if (text.length > 30) {
+      return;
+    }
+
     setBankDetails(prev => ({
       ...prev,
       [key]: text,
     }));
-  };
 
+    return;
+  }
+
+  /* ---------------------------------------------
+     OTHER FIELDS
+     --------------------------------------------- */
+  setBankDetails(prev => ({
+    ...prev,
+    [key]: text,
+  }));
+};
   /* =========================================================
      KEEP ACTIVE FIELD ABOVE KEYBOARD
      ========================================================= */
