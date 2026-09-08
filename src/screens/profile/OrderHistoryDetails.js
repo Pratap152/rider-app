@@ -35,11 +35,20 @@ const OrderHistoryDetails = ({ navigation, route }) => {
   const time = deliveredDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   // Earnings Logic
-  const tip = isZestbot ? (order?.transaction?.tips || 0) : (order?.pricing?.earningBreakup?.tips || 0);
-  const incentive = isZestbot ? (order?.transaction?.incentive || 0) : 0;
-  
-  // Total Earning is strictly 0 for Zestbot
-  const totalEarning = isZestbot ? 0 : (order?.pricing?.earningBreakup?.totalEarning || 0);
+  // Earnings Logic
+const tip = isZestbot
+  ? Number(order?.transaction?.tips ?? 0)
+  : Number(order?.pricing?.earningBreakup?.tips ?? 0);
+
+const incentive = isZestbot
+  ? Number(order?.transaction?.incentive ?? 0)
+  : 0;
+
+// Individual: pricing.riderEarning
+// Zestbot: totalEarnings
+const totalEarning = isZestbot
+  ? Number(order?.totalEarnings ?? 0)
+  : Number(order?.pricing?.riderEarning ?? 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -101,18 +110,32 @@ const OrderHistoryDetails = ({ navigation, route }) => {
         <Text style={styles.sectionHeading}>Earnings Breakdown :</Text>
         <View style={styles.card}>
           {isZestbot ? (
-            <>
-              {/* ZESTBOT BREAKDOWN */}
-              <InfoRow label="Incentive" value={`₹${incentive}`} valueStyle={{ color: '#8B5CF6' }} />
-              <InfoRow label="Customer Tip" value={`₹${tip}`} valueStyle={{ color: '#16A34A' }} />
-              <View style={styles.divider} />
-              <InfoRow 
-                label="Total Earning" 
-                value={`₹${totalEarning}`} 
-                valueStyle={{ color: '#16A34A', fontWeight: '700', fontSize: rf(2.1) }} 
-              />
-            </>
-          ) : (
+  <>
+    <InfoRow
+      label="Incentive"
+      value={`₹${incentive}`}
+      valueStyle={{ color: '#8B5CF6' }}
+    />
+
+    <InfoRow
+      label="Customer Tip"
+      value={`₹${tip}`}
+      valueStyle={{ color: '#16A34A' }}
+    />
+
+    <View style={styles.divider} />
+
+    <InfoRow
+      label="Total Earning"
+      value={`₹${totalEarning}`}
+      valueStyle={{
+        color: '#16A34A',
+        fontWeight: '700',
+        fontSize: rf(2.1),
+      }}
+    />
+  </>
+) : (
             <>
               {/* INDIVIDUAL BREAKDOWN */}
               <InfoRow label="Base Fare" value={`₹${order?.pricing?.earningBreakup?.basePay || 0}`} />
@@ -121,7 +144,7 @@ const OrderHistoryDetails = ({ navigation, route }) => {
               <InfoRow label="Customer Tip" value={`₹${tip}`} valueStyle={{ color: '#16A34A' }} />
               <View style={styles.divider} />
               <InfoRow 
-                label="Total Amount" 
+                label="Total Earning"
                 value={`₹${totalEarning}`} 
                 valueStyle={{ color: '#16A34A', fontWeight: '700', fontSize: rf(2.1) }} 
               />
@@ -136,7 +159,13 @@ const OrderHistoryDetails = ({ navigation, route }) => {
           <InfoRow label="Distance Travelled" value={`${order?.distanceTravelled || 0} km`} />
           <InfoRow
             label="Payment Status"
-            value={isZestbot ? (order?.transaction?.status || 'Credited') : 'Credited'}
+            value={
+  isZestbot
+    ? order?.transaction?.status || 'N/A'
+    : order?.pricing?.earningBreakup?.credited
+      ? 'Credited'
+      : 'Not Credited'
+}
             valueStyle={{ color: '#16A34A' }}
           />
           <InfoRow label="Order Status" value="Delivered" />

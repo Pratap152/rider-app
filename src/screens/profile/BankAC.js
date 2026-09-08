@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  findNodeHandle,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,26 +25,78 @@ import {
 
 import DeviceInfo from 'react-native-device-info';
 
-import { getBankDetails, updateBankDetails } from '../../services/profile/profileApiService';
+import {
+  getBankDetails,
+  updateBankDetails,
+} from '../../services/profile/profileApiService';
 
 const isTablet = DeviceInfo.isTablet();
 const containerMaxWidth = isTablet ? 900 : '100%';
 
+/* =========================================================
+   VALIDATION RULES
+   ========================================================= */
 
+/*
+ * Name fields:
+ * - Alphabets only
+ * - Single spaces between words
+ * - Minimum 3 characters
+ * - Maximum 30 characters
+ * - No leading space
+ * - No trailing space
+ * - No consecutive spaces
+ */
+const NAME_REGEX = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
 
-const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
+/*
+ * Account number:
+ * - Exactly 15 digits
+ * - Cannot contain letters
+ * - Cannot contain spaces
+ * - Cannot be all the same digit
+ */
+const ACCOUNT_NUMBER_REGEX = /^\d{15}$/;
+
+/*
+ * Indian IFSC:
+ * - Exactly 11 characters
+ * - First 4 must be alphabets
+ * - 5th must be 0
+ * - Last 6 can be alphabets/numbers
+ */
+const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+
+const ACCOUNT_TYPES = ['SAVINGS', 'CURRENT'];
+
+const FIELD_LABELS = {
+  accountHolderName: 'Account holder name',
+  bankName: 'Bank name',
+  branch: 'Branch name',
+};
+
+/* =========================================================
+   VALIDATION FUNCTIONS
+   ========================================================= */
 
 const validateName = value => {
-  const trimmedValue = value.trim();
-  return (
-    trimmedValue.length >= 3 &&
-    trimmedValue.length <= 30 &&
-    nameRegex.test(value) 
-  );
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  if (!value) {
+    return false;
+  }
+
+  if (value.length < 3 || value.length > 30) {
+    return false;
+  }
+
+  return NAME_REGEX.test(value);
 };
 
 const getNameError = (value, fieldName) => {
-  if (!value.trim()) {
+  if (!value) {
     return `${fieldName} is required`;
   }
 
@@ -51,14 +104,14 @@ const getNameError = (value, fieldName) => {
     return `${fieldName} must not exceed 30 characters`;
   }
 
-  const startsWithSpace = value[0] === ' ';
-  const endsWithSpace = value[value.length - 1] === ' ';
-
-  if (startsWithSpace || endsWithSpace) {
-    return `${fieldName} cannot start or end with spaces`;
+  if (value[0] === ' ') {
+    return `${fieldName} cannot start with a space`;
   }
 
-  
+  if (value[value.length - 1] === ' ') {
+    return `${fieldName} cannot end with a space`;
+  }
+
   if (/\s{2,}/.test(value)) {
     return `${fieldName} cannot contain consecutive spaces`;
   }
@@ -67,28 +120,98 @@ const getNameError = (value, fieldName) => {
     return `${fieldName} must contain at least 3 characters`;
   }
 
-  if (!/^[A-Za-z ]+$/.test(value)) {
-    return `${fieldName} can contain only alphabets`;
+  if (!NAME_REGEX.test(value)) {
+    return `${fieldName} can contain only alphabets and single spaces`;
   }
 
   return '';
 };
 
-const validateAccount = value =>
-  /^\d{15}$/.test(value) && !/^(\d)\1{14}$/.test(value); 
+const validateAccount = value => {
+  if (!ACCOUNT_NUMBER_REGEX.test(value)) {
+    return false;
+  }
 
-const validateIFSC = value => /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value);
+  // Reject 000000000000000, 111111111111111, etc.
+  if (/^(\d)\1{14}$/.test(value)) {
+    return false;
+  }
 
-const FIELD_LABELS = {
-  accountHolderName: 'Account holder name',
-  bankName: 'Bank name',
-  branch: 'Branch name',
+  return true;
 };
 
+const getAccountError = value => {
+  if (!value) {
+    return 'Account number is required';
+  }
+
+  if (!/^\d+$/.test(value)) {
+    return 'Account number can contain only digits';
+  }
+
+  if (value.length < 15) {
+    return 'Account number must be exactly 15 digits';
+  }
+
+  if (value.length > 15) {
+    return 'Account number must be exactly 15 digits';
+  }
+
+  if (/^(\d)\1{14}$/.test(value)) {
+    return 'Account number cannot be all the same digit';
+  }
+
+  return '';
+};
+
+const validateIFSC = value => {
+  if (!value) {
+    return false;
+  }
+
+  return IFSC_REGEX.test(value);
+};
+
+const getIFSCError = value => {
+  if (!value) {
+    return 'IFSC code is required';
+  }
+
+  if (value.length < 11) {
+    return 'IFSC code must be exactly 11 characters';
+  }
+
+  if (value.length > 11) {
+    return 'IFSC code must be exactly 11 characters';
+  }
+
+  if (!/^[A-Z]{4}/.test(value)) {
+    return 'First 4 characters of IFSC must be alphabets';
+  }
+
+  if (value.length >= 5 && value[4] !== '0') {
+    return 'The 5th character of IFSC must be 0';
+  }
+
+  if (!IFSC_REGEX.test(value)) {
+    return 'Invalid IFSC code format';
+  }
+
+  return '';
+};
+
+/* =========================================================
+   COMPONENT
+   ========================================================= */
+
 const BankAC = ({ navigation }) => {
+  const scrollViewRef = useRef(null);
+  const inputRefs = useRef({});
+
   const [isEditing, setIsEditing] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const [showAccountTypeDropdown, setShowAccountTypeDropdown] = useState(false);
+  const [showAccountTypeDropdown, setShowAccountTypeDropdown] =
+    useState(false);
 
   const [bankDetails, setBankDetails] = useState({
     accountHolderName: '',
@@ -104,7 +227,10 @@ const BankAC = ({ navigation }) => {
     ifsc: '',
   });
 
-  /* FETCH BANK DETAILS */
+  /* =========================================================
+     FETCH BANK DETAILS
+     ========================================================= */
+
   const fetchBankDetails = async () => {
     try {
       const res = await getBankDetails();
@@ -112,24 +238,64 @@ const BankAC = ({ navigation }) => {
       if (res?.data?.success) {
         const data = res.data.data;
 
+        /*
+         * Clean backend values before displaying them.
+         * This does not change the UI.
+         */
+
+        const cleanName = value => {
+          if (!value) {
+            return '';
+          }
+
+          return String(value)
+            .replace(/[^A-Za-z ]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 30);
+        };
+
+        const cleanAccountNumber = value => {
+          if (!value) {
+            return '';
+          }
+
+          return String(value)
+            .replace(/\D/g, '')
+            .slice(0, 15);
+        };
+
+        const cleanIFSC = value => {
+          if (!value) {
+            return '';
+          }
+
+          return String(value)
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '')
+            .slice(0, 11);
+        };
+
+        const accountType = String(data?.accountType || '').toUpperCase();
+
         setBankDetails({
-          // sanitize + trim on the way in so stale/legacy backend
-          // values (extra spaces, stray digits) never leave a
-          // field stuck or pre-loaded with an invalid leading space
-          accountHolderName: (data?.accountHolderName || '').replace(/[^A-Za-z ]/g, '').trim(),
-          accountNumber: (data?.accountNumber || '').replace(/\D/g, ''),
-          ifscCode: (data?.ifscCode || '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
-          bankName: (data?.bankName || '').replace(/[^A-Za-z ]/g, '').trim(),
-          accountType: data?.accountType || '',
-          branch: (data?.branch || '').replace(/[^A-Za-z ]/g, '').trim(),
+          accountHolderName: cleanName(data?.accountHolderName),
+          accountNumber: cleanAccountNumber(data?.accountNumber),
+          ifscCode: cleanIFSC(data?.ifscCode),
+          bankName: cleanName(data?.bankName),
+          accountType: ACCOUNT_TYPES.includes(accountType)
+            ? accountType
+            : '',
+          branch: cleanName(data?.branch),
         });
 
         setVerification({
-          bank: data?.bankVerificationStatus,
-          ifsc: data?.ifscVerificationStatus,
+          bank: data?.bankVerificationStatus || '',
+          ifsc: data?.ifscVerificationStatus || '',
         });
       }
     } catch (error) {
+      console.log('Fetch bank details error:', error);
       Alert.alert('Error', 'Failed to fetch bank details');
     }
   };
@@ -139,81 +305,270 @@ const BankAC = ({ navigation }) => {
   }, []);
 
   /* =========================================================
-     LIVE VALIDATION — recomputed on every render from current
-     bankDetails, same pattern as AddBankDetails.js.
+     VALIDATION
      ========================================================= */
 
-  const bankNameValid = validateName(bankDetails.bankName);
   const holderValid = validateName(bankDetails.accountHolderName);
+  const bankNameValid = validateName(bankDetails.bankName);
   const branchValid = validateName(bankDetails.branch);
   const accountValid = validateAccount(bankDetails.accountNumber);
   const ifscValid = validateIFSC(bankDetails.ifscCode);
 
+  const accountTypeValid = ACCOUNT_TYPES.includes(
+    bankDetails.accountType,
+  );
+
   const allValid =
-    bankNameValid && holderValid && branchValid && accountValid && ifscValid;
+    holderValid &&
+    bankNameValid &&
+    branchValid &&
+    accountValid &&
+    ifscValid &&
+    accountTypeValid;
+
+  /* =========================================================
+     LIVE ERRORS
+     ========================================================= */
 
   const liveErrors = {
     accountHolderName:
       bankDetails.accountHolderName.length > 0 && !holderValid
-        ? getNameError(bankDetails.accountHolderName, FIELD_LABELS.accountHolderName)
+        ? getNameError(
+            bankDetails.accountHolderName,
+            FIELD_LABELS.accountHolderName,
+          )
         : '',
+
     bankName:
       bankDetails.bankName.length > 0 && !bankNameValid
         ? getNameError(bankDetails.bankName, FIELD_LABELS.bankName)
         : '',
+
     branch:
       bankDetails.branch.length > 0 && !branchValid
         ? getNameError(bankDetails.branch, FIELD_LABELS.branch)
         : '',
+
     accountNumber:
       bankDetails.accountNumber.length > 0 && !accountValid
-        ? bankDetails.accountNumber.length < 15
-          ? 'Account number must be exactly 15 digits'
-          : /^(\d)\1{14}$/.test(bankDetails.accountNumber)
-          ? 'Account number cannot be all the same digit'
-          : 'Account number must be exactly 15 digits'
+        ? getAccountError(bankDetails.accountNumber)
         : '',
+
     ifscCode:
       bankDetails.ifscCode.length > 0 && !ifscValid
-        ? 'IFSC must be like ABCD0XXXXXX'
+        ? getIFSCError(bankDetails.ifscCode)
+        : '',
+
+    accountType:
+      isEditing && !accountTypeValid
+        ? 'Please select an account type'
         : '',
   };
 
-  /* UPDATE BANK DETAILS */
-  const handleUpdateBankDetails = async () => {
-    if (!allValid) {
-      Alert.alert('Error', 'Please fix the validation errors');
+  /* =========================================================
+     INPUT HANDLING
+     ========================================================= */
+
+  const handleInputChange = (key, text) => {
+    /* ---------------------------------------------
+       ACCOUNT NUMBER
+       --------------------------------------------- */
+    if (key === 'accountNumber') {
+      /*
+       * Keep digits only.
+       * Remove spaces, letters and special characters.
+       * Maximum 15 digits.
+       */
+      const newValue = String(text)
+        .replace(/\D/g, '')
+        .slice(0, 15);
+
+      setBankDetails(prev => ({
+        ...prev,
+        accountNumber: newValue,
+      }));
+
       return;
     }
 
-    try {
-      const payload = {
-        bankDetails: {
-          bankName: bankDetails.bankName.trim(),
-          accountHolderName: bankDetails.accountHolderName.trim(),
-          accountType: bankDetails.accountType || undefined,
-          branch: bankDetails.branch.trim(),
-          accountNumber: bankDetails.accountNumber,
-          ifscCode: bankDetails.ifscCode.trim().toUpperCase(),
-        },
-      };
+    /* ---------------------------------------------
+       IFSC CODE
+       --------------------------------------------- */
+    if (key === 'ifscCode') {
+      /*
+       * Convert to uppercase.
+       * Keep only A-Z and 0-9.
+       * Maximum 11 characters.
+       */
+      const newValue = String(text)
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 11);
 
-      const res = await updateBankDetails(payload);
+      setBankDetails(prev => ({
+        ...prev,
+        ifscCode: newValue,
+      }));
 
-      if (res?.data?.success) {
-        setIsEditing(false);
-        fetchBankDetails();
-      } else {
-        Alert.alert('Error', 'Failed to update bank details');
-      }
-    } catch (error) {
-      console.log('Update bank error:', error?.response?.data || error);
-      Alert.alert('Error', 'Something went wrong while updating bank details');
+      return;
     }
+
+    /* ---------------------------------------------
+       NAME / BANK / BRANCH
+       --------------------------------------------- */
+    if (
+      ['accountHolderName', 'bankName', 'branch'].includes(key)
+    ) {
+      /*
+       * Only alphabets and spaces.
+       */
+      let newValue = String(text).replace(/[^A-Za-z ]/g, '');
+
+      /*
+       * Never allow a leading space.
+       */
+      newValue = newValue.replace(/^ +/, '');
+
+      /*
+       * Never allow consecutive spaces.
+       */
+      newValue = newValue.replace(/ {2,}/g, ' ');
+
+      /*
+       * Maximum 30 characters.
+       */
+      newValue = newValue.slice(0, 30);
+
+      setBankDetails(prev => ({
+        ...prev,
+        [key]: newValue,
+      }));
+
+      return;
+    }
+
+    /* ---------------------------------------------
+       OTHER FIELDS
+       --------------------------------------------- */
+    setBankDetails(prev => ({
+      ...prev,
+      [key]: text,
+    }));
   };
 
+  /* =========================================================
+     KEEP ACTIVE FIELD ABOVE KEYBOARD
+     ========================================================= */
+
+  const handleInputFocus = key => {
+    /*
+     * Give React Native a moment to open the keyboard,
+     * then ask ScrollView to move the focused TextInput
+     * above the keyboard.
+     */
+    setTimeout(() => {
+      const input = inputRefs.current[key];
+
+      if (!input || !scrollViewRef.current) {
+        return;
+      }
+
+      const scrollResponder =
+        scrollViewRef.current.getScrollResponder?.();
+
+      if (
+        scrollResponder &&
+        scrollResponder.scrollResponderScrollNativeHandleToKeyboard
+      ) {
+        scrollResponder.scrollResponderScrollNativeHandleToKeyboard(
+          findNodeHandle(input),
+          120,
+          true,
+        );
+      }
+    }, Platform.OS === 'android' ? 250 : 150);
+  };
+
+  /* =========================================================
+     UPDATE BANK DETAILS
+     ========================================================= */
+
+ const handleUpdateBankDetails = async () => {
+  const finalHolder = bankDetails.accountHolderName.trim();
+  const finalBankName = bankDetails.bankName.trim();
+  const finalBranch = bankDetails.branch.trim();
+  const finalAccountNumber = bankDetails.accountNumber;
+  const finalIFSC = bankDetails.ifscCode.toUpperCase();
+  const finalAccountType = bankDetails.accountType;
+
+  const finalValid =
+    validateName(finalHolder) &&
+    validateName(finalBankName) &&
+    validateName(finalBranch) &&
+    validateAccount(finalAccountNumber) &&
+    validateIFSC(finalIFSC) &&
+    ACCOUNT_TYPES.includes(finalAccountType);
+
+  if (!finalValid) {
+    Alert.alert(
+      'Invalid Bank Details',
+      'Please check all bank details and fix the validation errors.',
+    );
+    return;
+  }
+
+  try {
+    const payload = {
+      bankDetails: {
+        bankName: finalBankName,
+        accountHolderName: finalHolder,
+        accountType: finalAccountType,
+        branch: finalBranch,
+        accountNumber: finalAccountNumber,
+        ifscCode: finalIFSC,
+      },
+    };
+
+    const res = await updateBankDetails(payload);
+
+    if (res?.data?.success) {
+      // Close edit mode
+      setIsEditing(false);
+      setShowAccountTypeDropdown(false);
+
+      // Refresh the latest details from backend
+      await fetchBankDetails();
+
+      // Show success message
+      Alert.alert(
+        'Success',
+        'Bank details updated successfully.',
+      );
+    } else {
+      Alert.alert(
+        'Update Failed',
+        res?.data?.message || 'Failed to update bank details.',
+      );
+    }
+  } catch (error) {
+    console.log(
+      'Update bank error:',
+      error?.response?.data || error,
+    );
+
+    Alert.alert(
+      'Update Failed',
+      error?.response?.data?.message ||
+        'Something went wrong while updating bank details. Please try again.',
+    );
+  }
+};
+  /* =========================================================
+     UI HELPERS
+     ========================================================= */
+
   const toggleTooltip = () => {
-    setShowInfo(!showInfo);
+    setShowInfo(prev => !prev);
   };
 
   const statusColor = status =>
@@ -223,53 +578,49 @@ const BankAC = ({ navigation }) => {
       ? '#FFA500'
       : '#FF3B30';
 
-  
-  const handleInputChange = (key, text) => {
-    if (key === 'accountNumber') {
-      const newValue = text.replace(/\D/g, '').slice(0, 15);
-      setBankDetails(prev => ({ ...prev, [key]: newValue }));
-      return;
-    }
-
-    if (key === 'ifscCode') {
-      const newValue = text.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
-      setBankDetails(prev => ({ ...prev, [key]: newValue }));
-      return;
-    }
-
-    if (['accountHolderName', 'bankName', 'branch'].includes(key)) {
-      let newValue = text.replace(/[^A-Za-z ]/g, '').slice(0, 30);
-      // Block a field that is nothing but leading spaces —
-      // there's no real content yet to justify it, and it's
-      // exactly the "starts with space" case you don't want.
-      if (newValue.trim().length === 0) {
-        newValue = '';
-      }
-      setBankDetails(prev => ({ ...prev, [key]: newValue }));
-      return;
-    }
-
-    setBankDetails(prev => ({ ...prev, [key]: text }));
-  };
-
   const accountTypeOptions = ['', 'SAVINGS', 'CURRENT'];
+
+  /* =========================================================
+     RENDER
+     ========================================================= */
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? rh(6) : 0}
+        keyboardVerticalOffset={
+          Platform.OS === 'ios' ? rh(6) : 0
+        }
       >
         <View style={styles.screenWrapper}>
           <View style={styles.container}>
             {/* HEADER */}
             <View style={styles.header}>
-              <Ionicons name="arrow-back" size={rf(3)} onPress={() => navigation.goBack()} />
-              <Text style={styles.headerTitle}>Bank Details</Text>
+              <Ionicons
+                name="arrow-back"
+                size={rf(3)}
+                onPress={() => navigation.goBack()}
+              />
+
+              <Text style={styles.headerTitle}>
+                Bank Details
+              </Text>
+
               {verification.bank !== 'VERIFIED' ? (
-                <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
-                  <Text style={styles.editText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (isEditing) {
+                      setShowAccountTypeDropdown(false);
+                      fetchBankDetails();
+                    }
+
+                    setIsEditing(prev => !prev);
+                  }}
+                >
+                  <Text style={styles.editText}>
+                    {isEditing ? 'Cancel' : 'Edit'}
+                  </Text>
                 </TouchableOpacity>
               ) : (
                 <View style={{ width: rw(10) }} />
@@ -277,22 +628,38 @@ const BankAC = ({ navigation }) => {
             </View>
 
             <ScrollView
+              ref={scrollViewRef}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
+              nestedScrollEnabled
+              automaticallyAdjustKeyboardInsets={
+                Platform.OS === 'ios'
+              }
             >
               {/* INFO */}
               <View style={styles.infoContainer}>
-                <TouchableOpacity onPress={toggleTooltip} style={styles.infoRow}>
-                  <Icon name="info-outline" size={22} color="#192A51" />
-                  <Text style={styles.infoText}>Secure Information</Text>
+                <TouchableOpacity
+                  onPress={toggleTooltip}
+                  style={styles.infoRow}
+                >
+                  <Icon
+                    name="info-outline"
+                    size={22}
+                    color="#192A51"
+                  />
+
+                  <Text style={styles.infoText}>
+                    Secure Information
+                  </Text>
                 </TouchableOpacity>
 
                 {showInfo && (
                   <View style={styles.tooltip}>
                     <Text style={styles.tooltipText}>
-                      Your bank details are securely stored and used only for payouts.
+                      Your bank details are securely stored and
+                      used only for payouts.
                     </Text>
                   </View>
                 )}
@@ -311,26 +678,32 @@ const BankAC = ({ navigation }) => {
                     label: 'Account Holder Name',
                     key: 'accountHolderName',
                     autoCapitalize: 'words',
+                    returnKeyType: 'next',
                   },
                   {
                     label: 'Account Number',
                     key: 'accountNumber',
                     keyboardType: 'numeric',
+                    returnKeyType: 'next',
                   },
                   {
                     label: 'IFSC Code',
                     key: 'ifscCode',
                     autoCapitalize: 'characters',
+                    autoCorrect: false,
+                    returnKeyType: 'next',
                   },
                   {
                     label: 'Bank Name',
                     key: 'bankName',
                     autoCapitalize: 'words',
+                    returnKeyType: 'next',
                   },
                   {
                     label: 'Branch',
                     key: 'branch',
                     autoCapitalize: 'words',
+                    returnKeyType: 'done',
                   },
                 ].map((item, index) => (
                   <View
@@ -350,25 +723,48 @@ const BankAC = ({ navigation }) => {
                     </Text>
 
                     <TextInput
+                      ref={ref => {
+                        inputRefs.current[item.key] = ref;
+                      }}
                       style={[
                         styles.input,
                         !isEditing && styles.disabledInput,
                         isTablet && styles.inputTablet,
-                        isEditing && liveErrors[item.key] && styles.inputError,
+                        isEditing &&
+                          liveErrors[item.key] &&
+                          styles.inputError,
                       ]}
                       editable={isEditing}
                       value={bankDetails[item.key]}
-                      keyboardType={item.keyboardType || 'default'}
+                      keyboardType={
+                        item.keyboardType || 'default'
+                      }
                       maxLength={
                         item.key === 'accountNumber'
                           ? 15
-                          : ['accountHolderName', 'bankName', 'branch'].includes(item.key)
+                          : [
+                              'accountHolderName',
+                              'bankName',
+                              'branch',
+                            ].includes(item.key)
                           ? 30
                           : item.key === 'ifscCode'
                           ? 11
                           : undefined
                       }
-                      autoCapitalize={item.autoCapitalize || 'none'}
+                      autoCapitalize={
+                        item.autoCapitalize || 'none'
+                      }
+                      autoCorrect={
+                        item.autoCorrect !== undefined
+                          ? item.autoCorrect
+                          : false
+                      }
+                      returnKeyType={item.returnKeyType}
+                      blurOnSubmit={false}
+                      onFocus={() =>
+                        handleInputFocus(item.key)
+                      }
                       onChangeText={text =>
                         handleInputChange(item.key, text)
                       }
@@ -383,7 +779,7 @@ const BankAC = ({ navigation }) => {
                   </View>
                 ))}
 
-                {/* ACCOUNT TYPE DROPDOWN */}
+                {/* ACCOUNT TYPE */}
                 <View
                   style={[
                     styles.inputBox,
@@ -404,6 +800,9 @@ const BankAC = ({ navigation }) => {
                       styles.input,
                       !isEditing && styles.disabledInput,
                       isTablet && styles.inputTablet,
+                      isEditing &&
+                        liveErrors.accountType &&
+                        styles.inputError,
                     ]}
                     onPress={() => {
                       if (isEditing) {
@@ -415,11 +814,14 @@ const BankAC = ({ navigation }) => {
                     <Text
                       style={[
                         styles.inputText,
-                        !bankDetails.accountType && styles.placeholderText,
+                        !bankDetails.accountType &&
+                          styles.placeholderText,
                       ]}
                     >
-                      {bankDetails.accountType || 'Select Account Type'}
+                      {bankDetails.accountType ||
+                        'Select Account Type'}
                     </Text>
+
                     <Ionicons
                       name="chevron-down"
                       size={20}
@@ -427,8 +829,15 @@ const BankAC = ({ navigation }) => {
                       style={styles.dropdownIcon}
                     />
                   </TouchableOpacity>
+
+                  {isEditing && liveErrors.accountType ? (
+                    <Text style={styles.errorText}>
+                      {liveErrors.accountType}
+                    </Text>
+                  ) : null}
                 </View>
 
+                {/* SAVE */}
                 {isEditing && (
                   <TouchableOpacity
                     style={[
@@ -438,7 +847,9 @@ const BankAC = ({ navigation }) => {
                     disabled={!allValid}
                     onPress={handleUpdateBankDetails}
                   >
-                    <Text style={styles.saveText}>Save Changes</Text>
+                    <Text style={styles.saveText}>
+                      Save Changes
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -465,7 +876,8 @@ const BankAC = ({ navigation }) => {
                         key={index}
                         style={[
                           styles.verifyCard,
-                          isTablet && styles.verifyCardTablet,
+                          isTablet &&
+                            styles.verifyCardTablet,
                         ]}
                       >
                         <View style={styles.leftRow}>
@@ -473,7 +885,9 @@ const BankAC = ({ navigation }) => {
                             style={[
                               styles.greenDot,
                               {
-                                backgroundColor: statusColor(item.value),
+                                backgroundColor: statusColor(
+                                  item.value,
+                                ),
                               },
                             ]}
                           />
@@ -481,7 +895,8 @@ const BankAC = ({ navigation }) => {
                           <Text
                             style={[
                               styles.verifyLabel,
-                              isTablet && styles.verifyLabelTablet,
+                              isTablet &&
+                                styles.verifyLabelTablet,
                             ]}
                           >
                             {item.label}
@@ -492,9 +907,12 @@ const BankAC = ({ navigation }) => {
                           style={[
                             styles.verifyText,
                             {
-                              color: statusColor(item.value),
+                              color: statusColor(
+                                item.value,
+                              ),
                             },
-                            isTablet && styles.verifyTextTablet,
+                            isTablet &&
+                              styles.verifyTextTablet,
                           ]}
                         >
                           {item.value}
@@ -505,9 +923,12 @@ const BankAC = ({ navigation }) => {
                 </View>
               )}
 
-              {/* Extra bottom space so the last field/button
-                  clears the keyboard instead of hiding behind it */}
-              <View style={{ height: rh(isEditing ? 4 : 2) }} />
+              {/* EXTRA BOTTOM SPACE FOR KEYBOARD */}
+              <View
+                style={{
+                  height: rh(isEditing ? 18 : 2),
+                }}
+              />
             </ScrollView>
           </View>
         </View>
@@ -518,12 +939,16 @@ const BankAC = ({ navigation }) => {
         transparent
         visible={showAccountTypeDropdown}
         animationType="fade"
-        onRequestClose={() => setShowAccountTypeDropdown(false)}
+        onRequestClose={() =>
+          setShowAccountTypeDropdown(false)
+        }
       >
         <TouchableOpacity
           style={styles.modalBg}
           activeOpacity={1}
-          onPress={() => setShowAccountTypeDropdown(false)}
+          onPress={() =>
+            setShowAccountTypeDropdown(false)
+          }
         >
           <View style={styles.dropdownContainer}>
             {accountTypeOptions.map((option, index) => (
@@ -535,27 +960,37 @@ const BankAC = ({ navigation }) => {
                     ...prev,
                     accountType: option,
                   }));
+
                   setShowAccountTypeDropdown(false);
                 }}
               >
                 <Text style={styles.dropdownOptionText}>
-                  {option}
+                  {option || 'Select Account Type'}
                 </Text>
               </TouchableOpacity>
             ))}
 
-            {/* Clear selection option */}
+            {/* CLEAR SELECTION */}
             <TouchableOpacity
-              style={[styles.dropdownOption, styles.clearOption]}
+              style={[
+                styles.dropdownOption,
+                styles.clearOption,
+              ]}
               onPress={() => {
                 setBankDetails(prev => ({
                   ...prev,
                   accountType: '',
                 }));
+
                 setShowAccountTypeDropdown(false);
               }}
             >
-              <Text style={[styles.dropdownOptionText, styles.clearText]}>
+              <Text
+                style={[
+                  styles.dropdownOptionText,
+                  styles.clearText,
+                ]}
+              >
                 Clear Selection
               </Text>
             </TouchableOpacity>
@@ -567,6 +1002,10 @@ const BankAC = ({ navigation }) => {
 };
 
 export default BankAC;
+
+/* =========================================================
+   STYLES
+   ========================================================= */
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -882,6 +1321,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
   },
+
   clearOption: {
     backgroundColor: '#FFF5F5',
   },
