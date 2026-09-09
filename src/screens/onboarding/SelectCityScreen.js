@@ -19,7 +19,6 @@ import { getCities } from '../../services/onboardingApi';
 const isTablet = DeviceInfo.isTablet();
 const H_PADDING = isTablet ? 40 : 20;
 const CONTENT_MAX_WIDTH = isTablet ? 700 : '100%';
-const titleFont = isTablet ? 26 : 20;
 const inputFont = isTablet ? 18 : 14;
 const cityFont = isTablet ? 18 : 16;
 const iconSize = isTablet ? 24 : 20;
@@ -74,11 +73,6 @@ export default function SelectCityScreen({ navigation, route }) {
 
         setAllCities(cities);
         setCitiesList(cities);
-
-        if (cities.length > 0) {
-          setSelectedCity(cities[0]);
-          setSearchText(cities[0]);
-        }
       } catch (err) {
         console.log('Error fetching cities', err);
       } finally {
@@ -91,15 +85,18 @@ export default function SelectCityScreen({ navigation, route }) {
 
   function handleSearch(text) {
     setSearchText(text);
-    setSelectedCity(text);
+
     if (!text || text.trim() === '') {
       setCitiesList(allCities);
       return;
     }
+
     const query = text.toLowerCase().trim();
+
     const filtered = allCities.filter(city =>
       (city || '').toLowerCase().includes(query),
     );
+
     setCitiesList(filtered);
   }
 
@@ -125,7 +122,7 @@ export default function SelectCityScreen({ navigation, route }) {
             style={styles.searchInput}
             placeholderTextColor="#999"
             onChangeText={handleSearch}
-            value={selectedCity}
+            value={searchText}
           />
         </View>
 
@@ -156,8 +153,7 @@ export default function SelectCityScreen({ navigation, route }) {
                 onPress={() => {
                   setSelectedCity(city);
                   setSearchText(city);
-                }}
-              >
+                }}>
                 <Icon
                   name="home-outline"
                   size={iconSize}

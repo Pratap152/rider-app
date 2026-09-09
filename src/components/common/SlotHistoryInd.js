@@ -1,5 +1,6 @@
 import React from 'react';
 import {useNavigation} from '@react-navigation/native';
+import {useSelector} from 'react-redux';
 import {
   Text,
   TouchableOpacity,
@@ -17,12 +18,33 @@ const isTablet = width >= 768;
 export default function SlotHistory() {
   const navigation = useNavigation();
 
+  const riderType = useSelector(
+    state => state.profile.data?.riderType,
+  );
+
+  const handleSlotHistoryPress = () => {
+    console.log('Slot History Rider Type:', riderType);
+
+    if (riderType === 'INDIVIDUAL_EMPLOYEE') {
+      // Individual Employee
+      // Go to Profile's Slot History screen
+      navigation.navigate('SlotHistory');
+    } else if (
+      riderType === 'COMPANY_EMPLOYEE' ||
+      riderType === 'ZESTBOT_EMPLOYEE'
+    ) {
+      // Company / Zestbot Employee
+      // Go to SlotsNavigator's SlotHistoryScreen
+      navigation.navigate('SlotHistoryScreen');
+    }
+  };
+
   return (
     <TouchableOpacity
       activeOpacity={0.85}
-      onPress={() => navigation.navigate('SlotHistoryScreen')}
-      style={styles.slots_history}
-    >
+      onPress={handleSlotHistoryPress}
+      style={styles.slots_history}>
+      
       <MaterialIcons
         name="history"
         size={isTablet ? 26 : 22}
@@ -53,7 +75,7 @@ const styles = StyleSheet.create({
 
     alignSelf: 'center',
 
-    backgroundColor: '#FCFDFF', 
+    backgroundColor: '#FCFDFF',
     borderRadius: 14,
 
     marginTop: 16,
