@@ -97,14 +97,14 @@ const VehicleSelectionScreen = ({ navigation, route }) => {
   }
 
   const handleSubmit = async () => {
-    if (!selectedVehicle || loading) return;
+    if (!localSelected || loading) return;
 
-    if (selectedVehicle === 'ev' && !evOwn) return;
+    if (localSelected === 'ev' && !evOwn) return;
 
     try {
       setLoading(true);
 
-      await submitVehicleType(selectedVehicle, evOwn);
+      await submitVehicleType(localSelected, evOwn);
 
       if (fromPreview) {
         navigation.goBack();
@@ -117,7 +117,6 @@ const VehicleSelectionScreen = ({ navigation, route }) => {
       setLoading(false);
     }
   };
-
   const vehicles = [
     {
       key: 'bike',
@@ -203,8 +202,7 @@ const VehicleSelectionScreen = ({ navigation, route }) => {
               </Pressable>
             );
           })}
-          {
-            selectedVehicle === 'ev' && (
+          {localSelected === 'ev' && (
               <View style={[styles.cardsContainer, { marginTop: 20 }]}>
                 {evTypes.map(evType => {
                   const selectedEVType = evOwn === evType.key;
