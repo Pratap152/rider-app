@@ -254,9 +254,8 @@ export default function ReferEarn({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-
-      <View style={styles.topBanner}>
+    <SafeAreaView style={[styles.safeArea]}>
+      <View style={styles.container}>
         <View style={styles.backButtonContainer}>
           <TouchableOpacity
             style={styles.backButton}
@@ -268,202 +267,202 @@ export default function ReferEarn({ navigation }) {
               color="#0F172A"
             />
           </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>Refer & Earn</Text>
+
+          <View style={{ width: 24 }} />
         </View>
 
-        <ReferralBanner />
-      </View>
-
-      {/* SCROLLABLE CONTENT */}
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{
-          paddingTop: hp("26%"),
-          paddingBottom: hp("18%"),
-        }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-          />
-        }
-      >
-
-        {/* Title */}
-        <View style={styles.titleRow}>
-          <View style={styles.line} />
-
-          <Text style={styles.title}>
-            Refer & Earn
-          </Text>
-
-          <View style={styles.line} />
+        <View style={styles.topBanner}>
+          <ReferralBanner />
         </View>
 
-        {/* Cards */}
-        <View style={styles.cardRow}>
-
-          <View
-            style={[
-              styles.card,
-              styles.greenCard,
-            ]}
-          >
-            <Ionicons
-              name="people"
-              size={22}
-              color="#166534"
+        {/* SCROLLABLE CONTENT */}
+        <ScrollView
+          style={styles.container}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
             />
-
-            <Text style={styles.cardValue1}>
-              {data.summary.totalReferrals || 0}
-            </Text>
-
-            <Text style={styles.cardLabel1}>
-              Joined people
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.card,
-              styles.orangeCard,
-            ]}
-          >
-            <Ionicons
-              name="wallet"
-              size={22}
-              color="#9A3412"
-            />
-
-            <Text style={styles.cardValue2}>
-              ₹{data?.summary?.totalRewards || 0}
-            </Text>
-
-            <Text style={styles.cardLabel2}>
-              Total Earnings
-            </Text>
-          </View>
-
-        </View>
-
-        {/* Referral Code */}
-        <View style={styles.codeBox}>
-
-          <Text style={styles.codeText}>
-            {referralCode}
-          </Text>
-
-          <View style={styles.iconRow}>
-
-            <TouchableOpacity
-              onPress={copyToClipboard}
-            >
-              <MaterialIcons
-                name="content-copy"
-                size={22}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={shareReferralCode}
-            >
-              <MaterialIcons
-                name="share"
-                size={22}
-              />
-            </TouchableOpacity>
-
-          </View>
-        </View>
-
-        {/* How it works */}
-        <View style={styles.howBox}>
-
-          <Text style={styles.howTitle}>
-            Refer & Earn
-          </Text>
-
-          <Text style={styles.howItem}>
-            • Invite your friends using referral code
-          </Text>
-
-          <Text style={styles.howItem}>
-            • Friends complete delivery tasks
-          </Text>
-
-          <Text style={styles.howItem}>
-            • Track referral progress and earnings
-          </Text>
-
-        </View>
-
-        {/* Tabs */}
-        <Text style={styles.sectionTitle}>
-          My Referrals
-        </Text>
-
-        <View style={styles.tabs}>
-          {["ALL", "PENDING", "COMPLETED"].map(
-            (t) => (
-              <TouchableOpacity
-                key={t}
-                onPress={() => setTab(t)}
-                style={[
-                  styles.tab,
-                  tab === t && styles.activeTab,
-                ]}
-              >
-                <Text
-                  style={
-                    tab === t
-                      ? { color: "#f3f0f0" }
-                      : undefined
-                  }
-                >
-                  {t}
-                </Text>
-              </TouchableOpacity>
-            )
-          )}
-        </View>
-
-        {filteredData.length > 0 ? (
-          filteredData.map((item, index) => (
-            <View key={
-              item?.referralId ||
-              item?.referee?.riderId ||
-              `referral-${index}`
-            }>
-              {renderItem({ item })}
-            </View>
-          ))
-        ) : (
-          renderEmpty()
-        )}
-
-      </ScrollView>
-
-      {/* Fixed Refer Button */}
-      <View style={styles.fixedButtonContainer}>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate("ReferFrd")}
+          }
         >
-          <Text style={styles.buttonText}>
-            Refer Now
-          </Text>
-        </TouchableOpacity>
-      </View>
 
+          {/* Title */}
+          <View style={styles.titleRow}>
+            <View style={styles.line} />
+
+            <Text style={styles.title}>
+              Refer & Earn
+            </Text>
+
+            <View style={styles.line} />
+          </View>
+
+          {/* Cards */}
+          <View style={styles.cardRow}>
+
+            <View
+              style={[
+                styles.card,
+                styles.greenCard,
+              ]}
+            >
+              <Ionicons
+                name="people"
+                size={22}
+                color="#166534"
+              />
+
+              <Text style={styles.cardValue1}>
+                {data.summary.totalReferrals || 0}
+              </Text>
+
+              <Text style={styles.cardLabel1}>
+                Joined people
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.card,
+                styles.orangeCard,
+              ]}
+            >
+              <Ionicons
+                name="wallet"
+                size={22}
+                color="#9A3412"
+              />
+
+              <Text style={styles.cardValue2}>
+                ₹{data?.summary?.totalRewards || 0}
+              </Text>
+
+              <Text style={styles.cardLabel2}>
+                Total Earnings
+              </Text>
+            </View>
+
+          </View>
+
+          {/* Referral Code */}
+          <View style={styles.codeBox}>
+
+            <Text style={styles.codeText}>
+              {referralCode}
+            </Text>
+
+            <View style={styles.iconRow}>
+
+              <TouchableOpacity
+                onPress={copyToClipboard}
+              >
+                <MaterialIcons
+                  name="content-copy"
+                  size={22}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={shareReferralCode}
+              >
+                <MaterialIcons
+                  name="share"
+                  size={22}
+                />
+              </TouchableOpacity>
+
+            </View>
+          </View>
+
+          {/* How it works */}
+          <View style={styles.howBox}>
+
+            <Text style={styles.howTitle}>
+              Refer & Earn
+            </Text>
+
+            <Text style={styles.howItem}>
+              • Invite your friends using referral code
+            </Text>
+
+            <Text style={styles.howItem}>
+              • Friends complete delivery tasks
+            </Text>
+
+            <Text style={styles.howItem}>
+              • Track referral progress and earnings
+            </Text>
+
+          </View>
+
+          {/* Tabs */}
+          <Text style={styles.sectionTitle}>
+            My Referrals
+          </Text>
+
+          <View style={styles.tabs}>
+            {["ALL", "PENDING", "COMPLETED"].map(
+              (t) => (
+                <TouchableOpacity
+                  key={t}
+                  onPress={() => setTab(t)}
+                  style={[
+                    styles.tab,
+                    tab === t && styles.activeTab,
+                  ]}
+                >
+                  <Text
+                    style={
+                      tab === t
+                        ? { color: "#f3f0f0" }
+                        : undefined
+                    }
+                  >
+                    {t}
+                  </Text>
+                </TouchableOpacity>
+              )
+            )}
+          </View>
+
+          {filteredData.length > 0 ? (
+            filteredData.map((item, index) => (
+              <View key={
+                item?.referralId ||
+                item?.referee?.riderId ||
+                `referral-${index}`
+              }>
+                {renderItem({ item })}
+              </View>
+            ))
+          ) : (
+            renderEmpty()
+          )}
+
+        </ScrollView>
+
+        {/* Fixed Refer Button */}
+        <View style={styles.fixedButtonContainer}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.navigate("ReferFrd")}
+          >
+            <Text style={styles.buttonText}>
+              Refer Now
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: "#F8FAFC",
   },
 
@@ -472,40 +471,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
 
-  topBanner: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    backgroundColor: "#F8FAFC",
-  },
-
   backButtonContainer: {
-    position: "absolute",
-    top: isTablet ? rh(1.2) : 20,
-    left: 20,
-    zIndex: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
 
   backButton: {
-    width: 25,
-    height: 25,
+    padding: 7,
     borderRadius: 21,
     backgroundColor: "rgba(255,255,255,0.95)",
-
     justifyContent: "center",
     alignItems: "center",
+  },
 
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+  },
 
-    elevation: 5,
+  topBanner: {
+    backgroundColor: "#F8FAFC",
   },
 
   loader: {
