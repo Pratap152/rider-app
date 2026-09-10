@@ -1,25 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useSelector} from 'react-redux';
 import dayjs from 'dayjs';
 
 import Header from '../../components/attendance/Header';
 import DateNavigator from '../../components/slots/DateNavigator';
 
-import SlotSummaryCard from '../../components/slots/SlotSummaryCard';
-import SlotListCard from '../../components/slots/SlotListCard';
-import DailySummaryCard from '../../components/slots/DailySummaryCard';
-
 import ShiftSummaryCard from '../../components/slots/ShiftSummaryCard';
 import EmptyState from '../../components/slots/EmptyState';
 
-import { getSlotDetails } from '../../services/slots/slotDetailsService';
+import {getSlotDetails} from '../../services/slots/slotDetailsService';
 
 const SlotHistoryScreen = () => {
   const riderType = useSelector(
@@ -33,9 +29,6 @@ const SlotHistoryScreen = () => {
   const [loading, setLoading] = useState(false);
   const [slotDetails, setSlotDetails] = useState(null);
   const [message, setMessage] = useState('');
-
-  const isIndividual =
-    riderType === 'INDIVIDUAL_EMPLOYEE';
 
   const isEmployee =
     riderType === 'COMPANY_EMPLOYEE' ||
@@ -55,7 +48,11 @@ const SlotHistoryScreen = () => {
         setSlotDetails(response.data);
       } else {
         setSlotDetails(null);
-        setMessage(response?.message || 'No slot details available.');
+
+        setMessage(
+          response?.message ||
+            'No shift details available.',
+        );
       }
     } catch (error) {
       console.log('Slot Details Error:', error);
@@ -64,7 +61,7 @@ const SlotHistoryScreen = () => {
 
       setMessage(
         error?.response?.data?.message ||
-        'No slot details available.',
+          'No shift details available.',
       );
     } finally {
       setLoading(false);
@@ -72,8 +69,10 @@ const SlotHistoryScreen = () => {
   };
 
   useEffect(() => {
-    fetchSlotDetails(selectedDate);
-  }, [selectedDate]);
+    if (isEmployee) {
+      fetchSlotDetails(selectedDate);
+    }
+  }, [selectedDate, isEmployee]);
 
   const goPreviousDay = () => {
     setSelectedDate(
@@ -91,16 +90,15 @@ const SlotHistoryScreen = () => {
     );
   };
 
-  const hasIndividualData =
-    slotDetails?.summary &&
-    slotDetails?.slots &&
-    slotDetails?.dailySummary;
-
   const hasEmployeeData =
     slotDetails?.bookings &&
     slotDetails.bookings.length > 0;
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top']}>
+
       <Header title="Slot Details" />
 
       <DateNavigator
@@ -121,47 +119,12 @@ const SlotHistoryScreen = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}>
 
-          {/* Individual Employee */}
-
-          {isIndividual &&
-            (hasIndividualData ? (
-              <>
-                <SlotSummaryCard
-                  summary={slotDetails.summary}
-                />
-
-                <SlotListCard
-                  slots={slotDetails.slots}
-                />
-
-                <DailySummaryCard
-                  summary={slotDetails.dailySummary}
-                />
-              </>
-            ) : (
-              <EmptyState
-                title="No Slot Details"
-                message={
-                  message ||
-                  `No slot details available for ${dayjs(
-                    selectedDate,
-                  ).format('DD MMM YYYY')}`
-                }
-              />
-            ))}
-
-          {/* Company Employee / Zestbot Employee */}
-
           {isEmployee &&
             (hasEmployeeData ? (
-              <>
-                <ShiftSummaryCard
-                  bookings={slotDetails.bookings}
-                  selectedDate={selectedDate}
-                />
-
-
-              </>
+              <ShiftSummaryCard
+                bookings={slotDetails.bookings}
+                selectedDate={selectedDate}
+              />
             ) : (
               <EmptyState
                 title="No Shift Assigned"
@@ -173,6 +136,7 @@ const SlotHistoryScreen = () => {
                 }
               />
             ))}
+
         </ScrollView>
       )}
     </SafeAreaView>

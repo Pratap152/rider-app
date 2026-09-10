@@ -9,15 +9,22 @@ export const getOrderHistory = async ({
 }) => {
   try {
     const token = await tokenService.getAccessToken();
+
     if (!token) {
-      Alert.alert('Auth Error', 'Token not found. Please login again.');
       return;
     }
-    
-    const response = await apiClient.get(`/api/rider/profile/orders/history`, {
-      params: { filter, page, limit },
-    });
-    
+
+    const response = await apiClient.get(
+      `/api/rider/profile/orders/history`,
+      {
+        params: {
+          filter,
+          page,
+          limit,
+        },
+      },
+    );
+
     return response.data;
   } catch (error) {
     console.log('Order History API Error:', error);

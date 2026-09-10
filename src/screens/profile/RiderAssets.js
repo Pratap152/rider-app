@@ -111,19 +111,25 @@ const RiderAssets = ({navigation}) => {
           badgeStyle: styles.deliveringBadge,
           textStyle: styles.deliveringText,
         };
+       case 'DISPATCHED':
+        return {
+          label: 'Shipped',
+          badgeStyle: styles.dispatchedBadge,
+          textStyle: styles.dispatchedText,
+        };
+
+        case 'COMPLETED':
+          return {
+            label: 'Delivered',
+            badgeStyle: styles.completedBadge,
+            textStyle: styles.completedText,
+          };
 
       case 'DELIVERED':
         return {
           label: 'Delivered',
           badgeStyle: styles.deliveredBadge,
           textStyle: styles.deliveredText,
-        };
-
-      case 'COMPLETED':
-        return {
-          label: 'Completed',
-          badgeStyle: styles.completedBadge,
-          textStyle: styles.completedText,
         };
 
       case 'REJECTED':
@@ -159,6 +165,42 @@ const RiderAssets = ({navigation}) => {
       .toLowerCase()
       .replace(/\b\w/g, letter => letter.toUpperCase());
   };
+
+  const formatDateTime = dateTime => {
+  if (!dateTime) {
+    return '';
+  }
+
+  try {
+    const [datePart, timePart] = dateTime.split(', ');
+
+    if (!datePart || !timePart) {
+      return dateTime;
+    }
+
+    const [day, month, year] = datePart.split('/');
+    const [hours, minutes, secondsWithMs] = timePart.split(':');
+
+    let hour = Number(hours);
+
+    if (Number.isNaN(hour)) {
+      return dateTime;
+    }
+
+    const period = hour >= 12 ? 'PM' : 'AM';
+
+    hour = hour % 12 || 12;
+
+    const seconds = secondsWithMs?.split('.')[0] || '00';
+
+    return `${day}/${month}/${year}, ${String(hour).padStart(
+      2,
+      '0',
+    )}:${minutes}:${seconds} ${period}`;
+  } catch (error) {
+    return dateTime;
+  }
+};
 
   if (loading) {
     return (
@@ -342,34 +384,27 @@ const RiderAssets = ({navigation}) => {
                       </Text>
                     </View>
 
-                    {item?.deliveryMode ? (
-                      <View style={styles.detailRow}>
-                        <Text style={styles.label}>Delivery:</Text>
-                        <Text style={styles.value}>
-                          {item.deliveryMode === 'PICKUP'
-                            ? 'Pickup'
-                            : 'Home Delivery'}
-                        </Text>
-                      </View>
-                    ) : null}
+                    {/* STATUS */}
+                  <View style={styles.detailRow}>
+                    <Text style={styles.label}>Status:</Text>
+                    <Text
+                      style={[
+                        styles.value,
+                        statusInfo.textStyle,
+                      ]}>
+                      {statusInfo.label}
+                    </Text>
+                  </View>
 
-                    {item?.pickupLocationId ? (
-                      <View style={styles.detailRow}>
-                        <Text style={styles.label}>Pickup:</Text>
-                        <Text style={styles.value}>
-                          {item.pickupLocationId}
-                        </Text>
-                      </View>
-                    ) : null}
-
-                    {item?.createdAt ? (
-                      <View style={styles.detailRow}>
-                        <Text style={styles.label}>Requested:</Text>
-                        <Text style={styles.value}>
-                          {item.createdAt}
-                        </Text>
-                      </View>
-                    ) : null}
+                  {/* REQUESTED DATE & TIME */}
+                  {item?.createdAt ? (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.label}>Requested:</Text>
+                      <Text style={styles.value}>
+                        {formatDateTime(item.createdAt)}
+                      </Text>
+                    </View>
+                  ) : null}
                   </View>
                 </View>
               );
@@ -714,4 +749,11 @@ statusBadge: {
     fontSize: rf(1.8),
     fontWeight: '600',
   },
+  dispatchedBadge: {
+  backgroundColor: '#DBEAFE',
+},
+
+dispatchedText: {
+  color: '#2563EB',
+},
 });

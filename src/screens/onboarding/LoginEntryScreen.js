@@ -1,18 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import WEBSITE_URL from "../../utils/host";
 import axios from "axios";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from 'react-native-responsive-screen';
-
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -22,9 +20,11 @@ import {
   ScrollView,
   TouchableWithoutFeedback,
   Keyboard,
+  Linking,
 } from 'react-native';
 import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getAllPolicies } from '../../services/profile/profileApiService';
 
 const BUTTON_BLUE = '#192A51';
 export const sendOTPApi = async (phone) => {
@@ -98,6 +98,24 @@ const LoginEntryScreen = ({ navigation }) => {
   const [isSending, setIsSending] = useState(false);
 
   const [error, setError] = useState('');
+
+  const [policies, setPolicies] = useState([]);
+
+  useEffect(() => {
+    const getPolicies = async () => {
+      try {
+        const response = await getAllPolicies();
+
+        if (response?.data?.success) {
+          setPolicies(response.data.data);
+        }
+      } catch (error) {
+        console.log('Policies Error:', error);
+      }
+    };
+
+    getPolicies();
+  }, []);
   // ---------------------------
   // MOBILE NUMBER VALIDATION
   // ---------------------------
@@ -151,6 +169,12 @@ const LoginEntryScreen = ({ navigation }) => {
 
 
   const isButtonDisabled = Boolean(error) || mobileNumber.length !== 10 || !isChecked || isSending;
+
+  const openPolicy = (policy) => {
+    if (policy?.url) {
+      Linking.openURL(policy.url);
+    }
+  };
 
   return (
     <>
@@ -229,8 +253,22 @@ const LoginEntryScreen = ({ navigation }) => {
 
                     <Text style={styles.termsText}>
                       By signing up I agree to the{' '}
-                      <Text style={styles.linkText}>Terms of use</Text> and{' '}
-                      <Text style={styles.linkText}>Privacy Policy.</Text>
+
+                      <Text
+                        style={styles.linkText}
+                        onPress={() => openPolicy(policies?.[0])}
+                      >
+                        Terms of use
+                      </Text>
+
+                      {' '}and{' '}
+
+                      <Text
+                        style={styles.linkText}
+                        onPress={() => openPolicy(policies?.[0])}
+                      >
+                        Privacy Policy.
+                      </Text>
                     </Text>
                   </View>
 

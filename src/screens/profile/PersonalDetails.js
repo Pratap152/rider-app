@@ -87,49 +87,10 @@ const PersonalDetailsScreen = ({ navigation }) => {
       return 'Email is required';
     }
 
-    // No spaces allowed
-    if (/\s/.test(email)) {
-      return 'Spaces are not allowed in email';
-    }
+    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
 
-    // Must contain exactly one @
-    const atCount = (email.match(/@/g) || []).length;
-
-    if (atCount !== 1) {
-      return 'Please enter a valid email address';
-    }
-
-    const [localPart, domainPart] = email.split('@');
-
-    // Local part is required
-    if (!localPart || !domainPart) {
-      return 'Please enter a valid email address';
-    }
-
-    // At least ONE alphabet should be present before @
-    if (!/[A-Za-z]/.test(localPart)) {
-      return 'Email must contain letters before @';
-    }
-
-    // Local part cannot start/end with dot
-    if (
-      localPart.startsWith('.') ||
-      localPart.endsWith('.')
-    ) {
-      return 'Please enter a valid email address';
-    }
-
-    // No consecutive dots
-    if (email.includes('..')) {
-      return 'Please enter a valid email address';
-    }
-
-    // Strict email format
-    const emailRegex =
-      /^[A-Za-z0-9]+(?:[._%+-][A-Za-z0-9]+)*@[A-Za-z0-9-]+(?:\.[A-Za-z]{2,})+$/;
-
-    if (!emailRegex.test(email)) {
-      return 'Please enter a valid email address';
+    if (!gmailRegex.test(email.trim())) {
+      return 'Please enter a valid Gmail address';
     }
 
     return '';
@@ -396,80 +357,32 @@ const PersonalDetailsScreen = ({ navigation }) => {
           </Section>
 
           {/* ADDRESS */}
-          <Section
-            title="Address"
-            iconName="location-outline"
-          >
-
+          <Section title="Address" iconName="location-outline" >
+            {/* WORK LOCATION */}
+            <Text style={styles.addressSubHeading}> Work Location
+            </Text>
             <View style={styles.row}>
-
               <View style={styles.rowInput}>
-
-                <Label text="Area" />
-
-                <Field
-                  editable={false}
-                  value={form.area}
-                  onChangeText={v =>
-                    handleChange('area', v)
-                  }
-                  isEditing={isEditing}
-                />
-
-              </View>
-
-              <View style={styles.rowInput}>
-
-                <Label text="City" />
-
-                <Field
-                  editable={false}
-                  value={form.city}
-                  onChangeText={v =>
-                    handleChange('city', v)
-                  }
-                  isEditing={isEditing}
-                />
-
-              </View>
-
-            </View>
-
-            <View style={styles.row}>
-
-              <View style={styles.rowInput}>
-
-                <Label text="State" />
-
-                <Field
-                  editable={false}
-                  value={form.state}
-                  onChangeText={v =>
-                    handleChange('state', v)
-                  }
-                  isEditing={isEditing}
-                />
-
-              </View>
-
-              <View style={styles.rowInput}>
-
                 <Label text="Pincode" />
-
-                <Field
-                  editable={false}
-                  value={form.pincode}
-                  keyboardType="number-pad"
-                  onChangeText={v =>
-                    handleChange('pincode', v)
-                  }
-                  isEditing={isEditing}
-                />
-
+                <Field editable={false} value={form.pincode} keyboardType="number-pad" onChangeText={v => handleChange('pincode', v)} isEditing={isEditing} />
               </View>
-
+              <View style={styles.rowInput}>
+                <Label text="City" />
+                <Field editable={false} value={form.city} onChangeText={v => handleChange('city', v)} isEditing={isEditing} />
+              </View>
             </View>
-
+            {/* PERMANENT ADDRESS */}
+            <Text style={styles.addressSubHeading}> Permanent Address </Text>
+            <View style={styles.row}>
+              <View style={styles.rowInput}>
+                <Label text="Area" />
+                <Field editable={false} value={form.area} onChangeText={v => handleChange('area', v)} isEditing={isEditing} />
+              </View>
+              <View style={styles.rowInput}>
+                <Label text="State" />
+                <Field editable={false} value={form.state} onChangeText={v => handleChange('state', v)} isEditing={isEditing} />
+              </View>
+            </View>
           </Section>
 
           {/* SAVE BUTTON */}
@@ -703,7 +616,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#101828',
   },
-
+  addressSubHeading: {
+    fontSize: rf(1.8),
+    fontWeight: '600',
+    color: '#101828',
+    marginBottom: rh(1),
+    marginTop: rh(0.5),
+  },
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',

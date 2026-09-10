@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,11 @@ import {
     heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import LocationBlocker from '../home/LocationBlocker';
+import {
+  checkLocationRequirements,
+  requestLocationRequirements,
+} from "../../utils/locationPermission";
 
 const getButtonColor = (time) => {
     if (time > 15) return '#16a34a'; // Green
@@ -31,6 +36,27 @@ const OrderCard = ({
     isSubmitting,
     loadingAction,
 }) => {
+
+    const [locationReady, setLocationReady] = useState(true);
+    const handleAccept = async () => {
+        const isLocationAvailable =
+            await checkLocationRequirements();
+
+        setLocationReady(isLocationAvailable);
+
+        if (!isLocationAvailable) {
+            return;
+        }
+
+        onAccept();
+    };
+
+    const handleEnableLocation = async () => {
+        const granted = await requestLocationRequirements();
+
+        setLocationReady(granted);
+    };
+
     return (
         <View style={styles.card}>
             <View style={styles.topRow}>
@@ -93,7 +119,7 @@ const OrderCard = ({
     ]}
     disabled={timeLeft === 0 || isSubmitting}
     activeOpacity={0.85}
-    onPress={onAccept}
+    onPress={handleAccept}
 >
         {
     isSubmitting && loadingAction === "accept" ? (
@@ -106,6 +132,11 @@ const OrderCard = ({
 }
     </TouchableOpacity>
 </View>
+
+<LocationBlocker
+    visible={!locationReady}
+    onEnable={handleEnableLocation}
+/>
         </View>
     );
 };

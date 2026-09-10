@@ -578,7 +578,7 @@ function DailyScreen({
         ) {
           return (
             <Row
-              title="Joining Bonus"
+              title="INCENTIVE"
               subtitle={formatTime(
                 item.time
               )}

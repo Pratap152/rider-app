@@ -6,6 +6,8 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {
   widthPercentageToDP as wp,
@@ -111,101 +113,109 @@ function ReferFrd({ navigation }) {
   }, [name, phone, city, loading]);
 
   return (
-    <View style={{ flex: 1 }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <View style={{ flex: 1 }}>
 
-      <View style={styles.fixedTopBanner}>
-        <View style={styles.backButtonContainer}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color="#0F172A"
+        <View style={styles.fixedTopBanner}>
+          <View style={styles.backButtonContainer}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={24}
+                color="#0F172A"
+              />
+            </TouchableOpacity>
+          </View>
+          <ReferralBanner />
+        </View>
+
+        {/* SCROLLABLE CONTENT */}
+        <ScrollView
+          contentContainerStyle={[
+            styles.container,
+            { paddingTop: hp("25%") }
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+
+          {/* Title */}
+          <View style={styles.titleRow}>
+            <View style={styles.line} />
+            <Text style={styles.title}>Refer & Earn</Text>
+            <View style={styles.line} />
+          </View>
+
+          <Text style={styles.sectionSubtitle}>
+            Enter the details below so we can get to know about your Refer
+          </Text>
+
+          <View style={styles.formContainer}>
+            {/* Name */}
+            <Text style={styles.label}>Name</Text>
+            <TextInput
+              placeholder="Please enter first name"
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
             />
-          </TouchableOpacity>
-        </View>
-        <ReferralBanner />
+
+            {/* Phone */}
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              placeholder="Please enter Phone Number"
+              keyboardType="number-pad"
+              maxLength={10}
+              style={[
+                styles.input,
+                phoneError ? styles.inputError : null,
+              ]}
+              value={phone}
+              onChangeText={(text) => {
+                const clean = text.replace(/[^0-9]/g, '');
+                setPhone(clean);
+                setPhoneError(clean.length ? validatePhone(clean) : '');
+              }}
+            />
+
+            {phoneError ? (
+              <Text style={styles.errorText}>{phoneError}</Text>
+            ) : null}
+
+            {/* City */}
+            <Text style={styles.label}>Friend's City Name</Text>
+            <TextInput
+              placeholder="Please enter City"
+              style={styles.input}
+              value={city}
+              onChangeText={setCity}
+            />
+
+            {/* Button */}
+            <TouchableOpacity
+              style={[
+                styles.confirmButton,
+                loading ? { opacity: 0.6 } : null,
+              ]}
+              onPress={handleConfirm}
+              disabled={loading}
+            >
+              <Text style={styles.confirmButtonText}>
+                {loading ? 'Submitting...' : 'Confirm'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+        </ScrollView>
       </View>
-
-      {/* SCROLLABLE CONTENT */}
-      <ScrollView
-        contentContainerStyle={[
-          styles.container,
-          { paddingTop: hp("25%") }
-        ]}
-      >
-
-        {/* Title */}
-        <View style={styles.titleRow}>
-          <View style={styles.line} />
-          <Text style={styles.title}>Refer & Earn</Text>
-          <View style={styles.line} />
-        </View>
-
-        <Text style={styles.sectionSubtitle}>
-          Enter the details below so we can get to know about your Refer
-        </Text>
-
-        <View style={styles.formContainer}>
-          {/* Name */}
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            placeholder="Please enter first name"
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-          />
-
-          {/* Phone */}
-          <Text style={styles.label}>Phone Number</Text>
-          <TextInput
-            placeholder="Please enter Phone Number"
-            keyboardType="number-pad"
-            maxLength={10}
-            style={[
-              styles.input,
-              phoneError ? styles.inputError : null,
-            ]}
-            value={phone}
-            onChangeText={(text) => {
-              const clean = text.replace(/[^0-9]/g, '');
-              setPhone(clean);
-              setPhoneError(clean.length ? validatePhone(clean) : '');
-            }}
-          />
-
-          {phoneError ? (
-            <Text style={styles.errorText}>{phoneError}</Text>
-          ) : null}
-
-          {/* City */}
-          <Text style={styles.label}>Friend's City Name</Text>
-          <TextInput
-            placeholder="Please enter City"
-            style={styles.input}
-            value={city}
-            onChangeText={setCity}
-          />
-
-          {/* Button */}
-          <TouchableOpacity
-            style={[
-              styles.confirmButton,
-              loading ? { opacity: 0.6 } : null,
-            ]}
-            onPress={handleConfirm}
-            disabled={loading}
-          >
-            <Text style={styles.confirmButtonText}>
-              {loading ? 'Submitting...' : 'Confirm'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-      </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

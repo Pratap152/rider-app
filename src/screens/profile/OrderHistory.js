@@ -31,7 +31,7 @@ const FILTERS = [
 const OrderHistory = ({ navigation }) => {
   const [selectedFilter, setSelectedFilter] = useState('today');
   const [filterLoading, setFilterLoading] = useState(false);
-  
+
   const {
     orders,
     summary,
@@ -201,19 +201,30 @@ const OrderHistory = ({ navigation }) => {
         {/* SUMMARY */}
         <View style={styles.summaryGrid}>
           <SummaryCard icon="bag-handle-outline" label="Total Orders" value={summary.totalOrders} bgColor="#FF690014" iconColor="#FF6900" />
-          
-          {/* ✅ RESTORED TARGET CARD (Only shows for Zestbot when targetOrders is not null) */}
-          {summary.targetOrders != null && (
-            <SummaryCard
-              icon="trophy-outline"
-              label="Target"
-              value={`${summary.completedOrders}/${summary.targetOrders}`}
-              bgColor="#8B5CF614"
-              iconColor="#8B5CF6"
-            />
-          )}
-          
-          <SummaryCard icon="wallet-outline" label="Total Earnings" value={`₹${summary.totalEarnings}`} bgColor="#00C95014" iconColor="#00C950" />
+
+          {/* TARGET STATUS - ZESTBOT / COMPANY ONLY */}
+          {(summary.riderType === 'ZESTBOT_EMPLOYEE' ||
+            summary.riderType === 'COMPANY_EMPLOYEE') && (
+              <SummaryCard
+                icon="trophy-outline"
+                label="Target"
+                value={summary.targetCompleted ? 'Completed' : 'Not Completed'}
+                bgColor="#8B5CF614"
+                iconColor="#8B5CF6"
+              />
+            )}
+
+          {/* TOTAL EARNINGS - INDIVIDUAL ONLY */}
+          {summary.riderType !== 'ZESTBOT_EMPLOYEE' &&
+            summary.riderType !== 'COMPANY_EMPLOYEE' && (
+              <SummaryCard
+                icon="wallet-outline"
+                label="Total Earnings"
+                value={`₹${summary.totalEarnings}`}
+                bgColor="#00C95014"
+                iconColor="#00C950"
+              />
+            )}
           <SummaryCard icon="star" label="Average Rating" value={summary.rating} bgColor="#F0B10014" iconColor="#F0B100" />
           <SummaryCard icon="navigate-circle-outline" label="KM Travelled" value={summary.km} bgColor="#2B7FFF14" iconColor="#2B7FFF" />
         </View>
@@ -366,12 +377,12 @@ const styles = StyleSheet.create({
   },
 
   restaurantDot: {
-  width: isTablet ? 56 : 42,
-  height: isTablet ? 56 : 42,
-  borderRadius: isTablet ? 28 : 21,
-  backgroundColor: '#F7EAE5',
-  marginRight: isTablet ? 16 : 12,
-},
+    width: isTablet ? 56 : 42,
+    height: isTablet ? 56 : 42,
+    borderRadius: isTablet ? 28 : 21,
+    backgroundColor: '#F7EAE5',
+    marginRight: isTablet ? 16 : 12,
+  },
 
   restaurantName: {
     fontSize: rf(2.2),

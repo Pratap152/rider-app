@@ -21,7 +21,7 @@ export const useOrderHistory = (filter) => {
 
   const [orders, setOrders] = useState([]);
   
-  // ✅ RESTORED TARGET FIELDS IN SUMMARY STATE
+  // RESTORED TARGET FIELDS IN SUMMARY STATE
   const [summary, setSummary] = useState({
     totalOrders: 0,
     totalEarnings: 0,
@@ -100,47 +100,107 @@ export const useOrderHistory = (filter) => {
       if (!res?.data?.success) return;
 
       const list = res.data.data || [];
-      
-      const mapped = list.map((item, i) => {
-        const isZestbot = item.riderType === 'ZESTBOT_EMPLOYEE';
-        const dateStr = isZestbot ? item.time : item.deliveredAt;
+const riderType = res.data.riderType;
 
-        return {
-          id: `${item.orderId}-${pageNo}-${i}`,
-          orderId: item.orderId,
-          vendorShopName: isZestbot ? item.store : item.vendorShopName,
-          userName: item.userName || '',
-          deliveredAddress: item.deliveredAddress || '',
-          earning: isZestbot ? (item.totalEarnings ?? 0) : (item.pricing?.riderEarning ?? 0),
-          credited: isZestbot 
-            ? (item.transaction?.status === 'CREDITED') 
-            : (item.pricing?.earningBreakup?.credited ?? false),
-          tip: isZestbot 
-            ? (item.transaction?.tips ?? 0) 
-            : (item.pricing?.earningBreakup?.tips ?? 0),
-          incentive: isZestbot 
-            ? (item.transaction?.incentive ?? 0) 
-            : 0,
-          distance: item.distanceTravelled ?? 0,
-          rating: item.rating ?? 0,
-          date: dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : '',
-          time: dateStr ? new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-          rawData: item,
-          riderType: item.riderType,
-        };
-      });
+const mapped = list.map((item, i) => {
+  const isZestbot = riderType === 'ZESTBOT_EMPLOYEE';
+
+  // Individual uses deliveredAt
+  // Zestbot uses time
+  const dateStr = isZestbot
+    ? item.time
+    : item.deliveredAt;
+
+  return {
+    id: `${item.orderId}-${pageNo}-${i}`,
+
+    orderId: item.orderId,
+
+    // Individual: vendorShopName
+    // Zestbot: store
+    vendorShopName: isZestbot
+      ? item.store ?? ''
+      : item.vendorShopName ?? '',
+
+    // Zestbot does not return userName
+    userName: item.userName ?? '',
+
+    // Individual: deliveredAddress
+    // Zestbot: not available
+    deliveredAddress: item.deliveredAddress ?? '',
+
+    // Individual: pricing.riderEarning
+    // Zestbot: totalEarnings
+    earning: isZestbot
+      ? Number(item.totalEarnings ?? 0)
+      : Number(item.pricing?.riderEarning ?? 0),
+
+    // Individual: earningBreakup.credited
+    // Zestbot: transaction.status
+    credited: isZestbot
+      ? item.transaction?.status === 'CREDITED' ||
+        item.transaction?.status === 'COMPLETED'
+      : Boolean(item.pricing?.earningBreakup?.credited),
+
+    // Individual: earningBreakup.tips
+    // Zestbot: transaction.tips
+    tip: isZestbot
+      ? Number(item.transaction?.tips ?? 0)
+      : Number(item.pricing?.earningBreakup?.tips ?? 0),
+
+    // Individual currently has no incentive field
+    // Zestbot: transaction.incentive
+    incentive: isZestbot
+      ? Number(item.transaction?.incentive ?? 0)
+      : 0,
+
+    // Same field for both
+    distance: Number(item.distanceTravelled ?? 0),
+
+    // Same field for both
+    rating: Number(item.rating ?? 0),
+
+    // Format date
+    date: dateStr
+      ? new Date(dateStr).toLocaleDateString('en-GB')
+      : '',
+
+    // Format time
+    time: dateStr
+      ? new Date(dateStr).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : '',
+
+    // Preserve complete backend object
+    rawData: item,
+
+    // IMPORTANT: use top-level riderType
+    riderType: riderType,
+  };
+});
 
       // ✅ RESTORED TARGET DATA MAPPING
       const summaryData = {
-        totalOrders: res.data.totalOrders,
-        totalEarnings: res.data.totalRiderEarnings,
-        rating: res.data.avgRating ?? 0,
-        km: Math.round(res.data.totalDistance),
-        riderType: res.data.riderType,
-        targetOrders: res.data.targetOrders,
-        completedOrders: res.data.completedOrders,
-        targetCompleted: res.data.targetCompleted,
-      };
+  totalOrders: Number(res.data.totalOrders ?? 0),
+
+  // IMPORTANT: backend field is totalEarnings
+  totalEarnings: Number(res.data.totalEarnings ?? 0),
+
+  rating: Number(res.data.avgRating ?? 0),
+
+  // Keep decimal value from backend
+  km: Number(res.data.totalDistance ?? 0),
+
+  riderType: res.data.riderType ?? null,
+
+  targetOrders: res.data.targetOrders ?? null,
+
+  completedOrders: Number(res.data.completedOrders ?? 0),
+
+  targetCompleted: Boolean(res.data.targetCompleted),
+};
 
       setOrders(prev => {
         const combined = pageNo === 1 ? mapped : [...prev, ...mapped];
