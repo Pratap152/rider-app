@@ -143,7 +143,11 @@ const MonthlySummaryScreen = ({ route }) => {
             value={summary.absentDays}
             color="#F44336"
           />
-
+          <Item
+            title="No Shift Assigned Days"
+            value={summary.noShiftAssignedDays}
+            color="#9CA3AF"
+          />
           <Item
             title="Holidays"
             value={summary.holidays}

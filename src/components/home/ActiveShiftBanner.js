@@ -33,6 +33,8 @@ const ActiveShiftBanner = () => {
   const [loading, setLoading] = useState(false);
 
   const riderType = response?.riderType;
+  const breakInMinutes =
+    riderType === 'INDIVIDUAL_EMPLOYEE' ? 10 : 30;
   const shiftType = response?.data?.shiftType;
   const startTime = response?.data?.startTime;
   const endTime = response?.data?.endTime;
@@ -139,8 +141,7 @@ const ActiveShiftBanner = () => {
           </Text>
 
           <Text style={styles.meta}>
-            Duration: {slot.durationInHours} hrs | Break: {slot.breakInMinutes}{' '}
-            mins
+            Duration: {slot.durationInHours} hrs | Break: {breakInMinutes} mins
           </Text>
 
           <Text style={styles.info}>{config.info}</Text>
@@ -165,7 +166,7 @@ const ActiveShiftBanner = () => {
             {config.subtitleSuffix}
           </Text>
           <Text style={styles.meta}>
-            Duration: {getDurationInHours(startTime, endTime)} hrs
+            Duration: {getDurationInHours(startTime, endTime)} hrs | Break: {breakInMinutes} mins
           </Text>
           <Text style={styles.info}>{config.info}</Text>
         </View>
