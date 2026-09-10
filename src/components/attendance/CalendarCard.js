@@ -69,7 +69,7 @@ const CalendarCard = ({
         return '#FACC15';
 
       case 'ONE_THIRD_DAY':
-        return '#F59E0B';
+        return '#EC4899';
 
       case 'ABSENT':
         return '#EF4444';
@@ -78,16 +78,18 @@ const CalendarCard = ({
         return '#3B82F6';
 
       case 'LEAVE':
-        return '#9C27B0';
+        return '#701680';
 
       case 'IN_PROGRESS':
         return '#13ACBE';
+
+      case 'NO_SHIFT_ASSIGNED':
+        return '#9CA3AF';
 
       default:
         return '#FFFFFF';
     }
   };
-
   const handleDatePress = day => {
     if (!day) return;
 
@@ -219,7 +221,7 @@ const CalendarCard = ({
               <View
                 style={[
                   styles.legendDot,
-                  { backgroundColor: '#22C55E' },
+                  { backgroundColor: '#22C55E' }
                 ]}
               />
               <Text style={styles.legendText}>Full Day</Text>
@@ -258,7 +260,7 @@ const CalendarCard = ({
               <View
                 style={[
                   styles.legendDot,
-                  { backgroundColor: '#F59E0B' },
+                  { backgroundColor: '#EC4899' }
                 ]}
               />
               <Text style={styles.legendText}>One Third Day</Text>
@@ -283,7 +285,17 @@ const CalendarCard = ({
               />
               <Text style={styles.legendText}>In Progress</Text>
             </View>
+            <View style={styles.legendItem}>
+              <View
+                style={[
+                  styles.legendDot,
+                  { backgroundColor: '#9CA3AF' },
+                ]}
+              />
+              <Text style={styles.legendText}>No Shift Assigned</Text>
+            </View>
           </View>
+
         </>
       )}
     </View>
